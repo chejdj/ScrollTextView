@@ -32,9 +32,11 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
     private ScheduledExecutorService scheduledExecutorService;
     private int textX = 0;
     private int textY = 0;
+    private int textHeight = 0;
     private int textWidth = 0;
     private volatile boolean isTextChange = true;
     private int scollMax = 0;
+    private int directionType; // 0代表横向，1代表竖向
 
     public ScrollTextView(Context context) {
         super(context);
@@ -49,6 +51,7 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
         text = arr.getString(R.styleable.ScrollText_text);
         textSize = arr.getDimension(R.styleable.ScrollText_text_size, textSize);
         textStyle = arr.getString(R.styleable.ScrollText_text_style);
+        directionType = arr.getInt(R.styleable.ScrollText_scroll_orientation, 0);
 
         paint = new Paint();
         paint.setColor(textColor);
@@ -63,7 +66,7 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-        scheduledExecutorService.scheduleAtFixedRate(new ScheduleDraw(), 100, 20, TimeUnit.MILLISECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(new DrawRunnable(), 100, 20, TimeUnit.MILLISECONDS);
     }
 
     public void setText(String newText) {
@@ -75,7 +78,7 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
     }
 
 
-    class ScheduleDraw implements Runnable {
+    class DrawRunnable implements Runnable {
 
         @Override
         public void run() {
@@ -83,22 +86,42 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
                 measureVarious();
                 isTextChange = false;
             }
-            if (Math.abs(textX) > scollMax) {
-                textX = 0;
+
+            if (directionType == DIRECTION.HORIZONTAL.ordinal()) {
+                if (Math.abs(textX) > scollMax) {
+                    textX = 0;
+                }
+                Canvas canvas = surfaceHolder.lockCanvas();
+                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                canvas.drawText(text, textX--, textY, paint);
+                surfaceHolder.unlockCanvasAndPost(canvas);
+            } else {
+                if (Math.abs(textY) > scollMax) {
+                    textY = 0;
+                }
+                Canvas canvas = surfaceHolder.lockCanvas();
+                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                canvas.drawText(text, textX, textY++, paint);
+                surfaceHolder.unlockCanvasAndPost(canvas);
             }
-            Canvas canvas = surfaceHolder.lockCanvas();
-            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-            canvas.drawText(text, textX--, textY, paint);
-            surfaceHolder.unlockCanvasAndPost(canvas);
         }
     }
 
     private void measureVarious() {
         textWidth = (int) paint.measureText(text);
         Paint.FontMetrics fontMetrics = paint.getFontMetrics();
-        float distance = (fontMetrics.bottom - fontMetrics.top) / 2 - fontMetrics.bottom;
-        textY = viewHeight / 2 + (int) distance;
-        scollMax = Math.min(viewWidth, textWidth);
+        textHeight = (int) (fontMetrics.bottom - fontMetrics.top);
+        if (directionType == DIRECTION.VERTICAL.ordinal()) {
+            textX = textWidth / 2;
+            textY = 0;
+            scollMax = Math.min(viewHeight, textHeight);
+        } else {
+            float distance = (fontMetrics.bottom - fontMetrics.top) / 2 - fontMetrics.bottom;
+            textY = viewHeight / 2 + (int) distance;
+            textX = 0;
+            scollMax = Math.min(viewWidth, textWidth);
+        }
+
     }
 
 
@@ -124,5 +147,10 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
     @Override
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
         scheduledExecutorService.shutdown();
+    }
+
+    public enum DIRECTION {
+        HORIZONTAL,
+        VERTICAL
     }
 }
