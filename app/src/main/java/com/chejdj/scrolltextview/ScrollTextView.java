@@ -100,8 +100,11 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
                     textY = 0;
                 }
                 Canvas canvas = surfaceHolder.lockCanvas();
+                canvas.rotate(-90,textX,textY);
                 canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                canvas.drawText(text, textX, textY++, paint);
+                canvas.drawText(text, textX, textY, paint);
+                canvas.rotate(90,textX,textY);
+                textY++;
                 surfaceHolder.unlockCanvasAndPost(canvas);
             }
         }
@@ -114,7 +117,7 @@ public class ScrollTextView extends SurfaceView implements SurfaceHolder.Callbac
         if (directionType == DIRECTION.VERTICAL.ordinal()) {
             textX = textWidth / 2;
             textY = 0;
-            scollMax = Math.min(viewHeight, textHeight);
+            scollMax = viewHeight+textWidth;
         } else {
             float distance = (fontMetrics.bottom - fontMetrics.top) / 2 - fontMetrics.bottom;
             textY = viewHeight / 2 + (int) distance;
